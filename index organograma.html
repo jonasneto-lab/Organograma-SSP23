@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organograma Expedição — SSP23</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* === Identidade Mercado Livre === */
+    --meli-yellow:#FFE600; --meli-yellow-d:#FFD100;
+    --navy:#2D3277; --navy-2:#3a4193; --navy-line:#c9cde8;
+    --blue:#3483FA; --blue-d:#2968c8; --blue-soft:#e9f0fd;
+    /* semáforo da escala (função, não marca) */
+    --green:#2e7d32; --green-d:#1b5e20; --green-soft:#e9f3ea;
+    --orange:#FFD100; --orange-soft:#fff8d6;
+    --red:#e53935;
+    --ink:#1a1a1a; --muted:#666c7a;
+    --bg:#f4f4f6; --card:#ffffff; --line:#e3e5ed;
+    --shadow:0 1px 3px rgba(45,50,119,.09),0 6px 18px rgba(45,50,119,.08);
+    --radius:12px;
+    --font:'Inter',ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);
+    font-size:12.5px;
+    background:var(--bg); color:var(--ink); line-height:1.4;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    font-feature-settings:"cv05","ss01","tnum";
+  }
+  .mono,.ops-num,.nums,.window-total,.gal-slot .tot,.window .wh .time,.stepper span{
+    font-family:var(--mono); font-feature-settings:"tnum"; letter-spacing:-.2px;
+  }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{
+    position:sticky; top:0; z-index:50;
+    background:var(--meli-yellow); color:var(--ink);
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:10px 16px; box-shadow:0 2px 10px rgba(0,0,0,.12);
+  }
+  .toolbar .brand{font-weight:800; font-size:13.5px; letter-spacing:.2px; margin-right:auto; display:flex; align-items:center; gap:9px}
+  .toolbar .brand small{display:block; font-weight:600; color:#5a5a45; font-size:10.5px; letter-spacing:.3px}
+  .dot{width:9px;height:9px;border-radius:50%;background:#9a9a7a;display:inline-block}
+  .dot.on{background:#1b9e3a}
+  .btn{
+    border:0; border-radius:9px; padding:8px 13px; font-size:13px; font-weight:700;
+    cursor:pointer; color:#fff; background:var(--navy); transition:.15s;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .btn:hover{background:var(--navy-2)}
+  .btn.primary{background:var(--blue)}
+  .btn.primary:hover{background:var(--blue-d)}
+  .btn.warn{background:#d32f2f}
+  .btn.warn:hover{background:#b71c1c}
+  .btn.toggle.on{background:#1a1a1a; color:var(--meli-yellow)}
+  .save-state{font-size:12px; min-width:74px; font-weight:600}
+
+  /* ---------- Canvas ---------- */
+  .wrap{max-width:1280px; margin:18px auto; padding:0 16px 50px}
+
+  /* abas (cenários) */
+  .tabs{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:0 0 16px}
+  .tab{display:inline-flex; align-items:center; gap:7px; padding:7px 13px; border-radius:9px;
+    background:#e7e9f1; color:#5a6072; font-weight:700; font-size:12.5px; cursor:pointer;
+    border:1px solid var(--line); transition:.12s}
+  .tab:hover{background:#dde0ec}
+  .tab.active{background:var(--navy); color:#fff; border-color:var(--navy)}
+  .tab .tab-tipo{font-size:12px}
+  .tab .tab-name{outline:none; border-radius:4px; pointer-events:none}
+  body.editing .tab.active .tab-name{pointer-events:auto}
+  body.editing .tab.active .tab-name:focus{background:rgba(255,255,255,.18); padding:0 3px}
+  .tab .tab-close{display:none; border:0; background:rgba(255,255,255,.22); color:#fff;
+    width:18px;height:18px;border-radius:50%; cursor:pointer; font-size:12px; line-height:1; align-items:center; justify-content:center}
+  body.editing .tab.active .tab-close{display:inline-flex}
+  .tab .tab-close:hover{background:var(--red)}
+  .tab-add{display:none; border:1px dashed var(--line); background:transparent; color:var(--muted);
+    border-radius:9px; padding:7px 12px; font-weight:700; font-size:12px; cursor:pointer}
+  body.editing .tab-add{display:inline-block}
+  .tab-add:hover{border-color:var(--blue); color:var(--blue)}
+  .solo{margin-top:2px}
+
+  /* árvore + camada de conectores */
+  .tree{position:relative}
+  #wires{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0}
+  .tree > *{position:relative; z-index:1}
+
+  .leader{
+    background:linear-gradient(135deg,var(--navy),var(--navy-2));
+    color:#fff; border-radius:13px; padding:11px 20px; text-align:center;
+    width:min(360px,90%); margin:0 auto; box-shadow:var(--shadow);
+    display:flex; align-items:center; gap:12px; justify-content:center;
+  }
+  .leader .av{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.16);
+    display:grid;place-items:center;font-size:16px;flex:0 0 auto}
+  .leader h1{font-size:17px; margin:0; letter-spacing:.3px; font-weight:800}
+  .leader .role{font-size:10px; letter-spacing:2px; color:var(--meli-yellow); font-weight:700}
+
+  .trunk{display:none}
+
+  /* áreas em grade de cards — clique para expandir */
+  .spine{width:2px;height:18px;background:var(--navy-line);margin:6px auto 0}
+  .accordion{display:grid; grid-template-columns:repeat(auto-fill,minmax(225px,1fr)); gap:12px; margin-top:6px; align-items:start}
+
+  .dept{
+    border:1px solid var(--line); border-radius:14px; background:#fbfbfd;
+    padding:11px; box-shadow:var(--shadow); transition:box-shadow .15s;
+  }
+  .dept:not(.closed){ grid-column:1 / -1; }              /* card expandido ocupa a linha inteira */
+  .dept.closed{ padding:0; border:0; background:transparent; box-shadow:none; }
+  .dept.closed .branch-head{ border-radius:13px; box-shadow:var(--shadow); min-height:60px; }
+  .dept.closed .branch-head:hover{ transform:translateY(-2px); box-shadow:0 8px 22px rgba(45,50,119,.18); }
+
+  .branch-head{
+    border-radius:9px; padding:11px 13px; color:#fff; display:flex; align-items:center; gap:10px;
+    font-weight:800; font-size:14px; letter-spacing:.3px; position:relative;
+    transition:transform .12s, box-shadow .12s;
+  }
+  .branch-head[data-toggle]{cursor:pointer}
+  .branch-head .ic{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.18);
+    display:grid;place-items:center;font-size:16px; flex:0 0 auto}
+  .branch-head small{display:block;font-weight:600;font-size:10.5px;opacity:.85;letter-spacing:.3px}
+  .branch-head .chev{margin-left:auto; font-size:13px; transition:transform .15s; opacity:.9}
+  .dept.closed .chev{transform:rotate(-90deg)}
+  .dept-body{margin-top:10px}
+  .dept.closed .dept-body{display:none}
+  .head-sorting{background:linear-gradient(135deg,var(--meli-yellow),var(--meli-yellow-d)); color:var(--ink)}
+  .head-sorting .ic{background:rgba(0,0,0,.12)}
+  .head-sorting small{opacity:.65}
+  .head-exped{background:linear-gradient(135deg,var(--navy),var(--navy-2))}
+  .head-area{background:linear-gradient(135deg,#475569,#5b6b85)}
+  .area-del{position:absolute; right:36px; top:50%; transform:translateY(-50%);
+    width:20px;height:20px;border-radius:50%; border:0; background:rgba(255,255,255,.25); color:#fff;
+    font-size:13px; line-height:1; cursor:pointer; display:none}
+  body.editing .area-del{display:inline-flex; align-items:center; justify-content:center}
+  .area-del:hover{background:var(--red)}
+  .area-people{display:flex; flex-wrap:wrap; gap:6px}
+  .func.f-area{background:#e3e9fb; color:var(--navy); min-width:14px; text-transform:uppercase}
+  .func.f-area:empty::before{content:'função'; color:#9aa0b4; font-style:italic; text-transform:none}
+  .area-add{display:none; border:2px dashed var(--line); background:transparent; color:var(--muted);
+    border-radius:13px; padding:9px; font-size:12px; font-weight:700; cursor:pointer; min-height:60px; align-items:center; justify-content:center}
+  body.editing .area-add{display:flex}
+  .area-add:hover{border-color:var(--blue); color:var(--blue)}
+
+  .col-cards{display:grid; gap:9px; margin-top:0}
+  .grid-sorting{grid-template-columns:repeat(4,1fr)}
+  .grid-exped{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:760px){ .grid-sorting{grid-template-columns:repeat(2,1fr)} }
+  @media(max-width:620px){ .grid-sorting,.grid-exped{grid-template-columns:1fr} }
+
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); overflow:hidden; position:relative; display:flex; flex-direction:column;
+  }
+  .card .top{display:flex; align-items:center; gap:9px; padding:10px 11px 7px}
+  .card .avatar{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:14px;flex:0 0 auto}
+  .av-blue{background:var(--navy)} .av-green{background:var(--navy)} .av-orange{background:var(--ink)}
+  .card .nm{font-weight:800; font-size:13px; line-height:1.15; letter-spacing:.1px}
+  .card .rl{font-size:10.5px; color:var(--muted); font-weight:600}
+  .card .body{padding:0 11px 11px; font-size:11.5px; color:var(--ink); flex:1}
+  .pill-foco{font-size:9.5px;font-weight:800;letter-spacing:.5px;color:var(--navy);text-transform:uppercase;margin:3px 0 2px}
+  .head-exped ~ * .pill-foco, .galpao .pill-foco{color:var(--navy)}
+  .strip{height:4px;width:100%}
+  .strip-blue{background:var(--meli-yellow)} .strip-green{background:var(--navy)} .strip-orange{background:var(--meli-yellow)}
+  .apoio-tag{background:var(--meli-yellow); color:var(--ink); font-weight:800; letter-spacing:1.5px;
+    font-size:10.5px; padding:5px 12px; text-align:center}
+
+  .ops-count{display:flex; align-items:center; gap:7px; margin:5px 0 6px; flex-wrap:wrap}
+  .ops-icons{display:flex; gap:2.5px; flex-wrap:wrap}
+
+  .op-list{display:flex; flex-wrap:wrap; gap:5px; margin:2px 0 9px}
+  .op-chip{display:inline-flex; align-items:center; gap:5px; background:#eef1f8; border:1px solid var(--line);
+    border-radius:999px; padding:3px 4px 3px 10px; font-size:11.5px; font-weight:600; color:var(--ink)}
+  .op-name{outline:none; border-radius:4px; min-width:8px}
+  .op-actions{display:none; align-items:center; gap:3px}
+  body.editing .op-actions{display:inline-flex}
+  .op-actions .mv{border:0; background:var(--navy); color:#fff; font-family:var(--mono); font-weight:700;
+    font-size:9.5px; padding:2px 5px; border-radius:999px; cursor:pointer; letter-spacing:-.3px}
+  .op-actions .mv:hover{background:var(--blue)}
+  .op-actions .op-del{border:0; background:#fdecea; color:var(--red); width:17px; height:17px; border-radius:50%;
+    font-size:12px; line-height:1; cursor:pointer; font-weight:700}
+  .op-actions .op-del:hover{background:var(--red); color:#fff}
+  .op-add{display:none; align-items:center; border:1px dashed var(--line); background:transparent; color:var(--muted);
+    border-radius:999px; padding:3px 11px; font-size:11px; font-weight:700; cursor:pointer}
+  body.editing .op-add{display:inline-flex}
+  .op-add:hover{border-color:var(--blue); color:var(--blue)}
+  .op-add-ps{border-color:#e8c98f; color:#9a6b00}
+  .op-add-ps:hover{border-color:var(--orange); color:var(--orange)}
+  .op-chip .turno{font-family:var(--mono); font-size:8px; font-weight:700; padding:1px 4px; border-radius:999px; line-height:1.4}
+  .turno.t0{background:#e3e9fb; color:var(--navy)} .turno.t1{background:#fff3cf; color:#8a6d00}
+  .op-chip .func{font-family:var(--mono); font-size:8px; font-weight:800; padding:1px 5px; border-radius:999px; letter-spacing:.3px; cursor:default}
+  body.editing .op-chip .func{cursor:pointer}
+  .func.f-op{background:#e7eaf2; color:#5a6072}
+  .func.f-ps{background:var(--orange); color:#1a1a1a}
+  .op-chip.is-ps{background:#fff6e6; border-color:#f0d49a}
+  .person.ps{background:var(--orange)}
+  .ps-num{color:#9a6b00; font-weight:800}
+
+  /* nomes na escala de almoço */
+  .lc-list{display:flex; flex-wrap:wrap; gap:4px; min-height:24px; margin-bottom:7px}
+  .lc{font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:999px; border:1px solid transparent; cursor:default}
+  .lc b{font-family:var(--mono); font-size:8px; opacity:.85; margin-right:1px}
+  body.editing .lc{cursor:pointer}
+  body.editing .lc:hover{box-shadow:0 0 0 2px rgba(0,0,0,.08)}
+  .lc-active{background:var(--green-soft); color:var(--green-d); border-color:#cfe6d0}
+  .lc-lunch{background:#fde8e7; color:#c62828; border-color:#f3c6c4}
+  .lc-ps{border-style:dashed; border-color:var(--orange)}
+  .lc-empty{font-size:10px; color:var(--muted); font-style:italic}
+  .person{width:11px;height:11px;border-radius:3px 3px 4px 4px;position:relative;background:var(--green)}
+  .person::before{content:"";position:absolute;top:-4px;left:50%;transform:translateX(-50%);
+    width:6px;height:6px;border-radius:50%;background:inherit}
+  .ops-icons .person{background:var(--navy)}
+  .ops-num{font-weight:700; font-size:12px}
+  .ops-num small{font-weight:600;color:var(--muted);font-size:10px;font-family:var(--font)}
+  .stepper{display:inline-flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .stepper button{border:0;background:#f1f4fa;width:20px;height:20px;font-size:13px;cursor:pointer;color:var(--ink);font-weight:700}
+  .stepper button:hover{background:#e3e9f5}
+  .stepper span{min-width:22px;text-align:center;font-weight:700;font-size:11.5px}
+
+  ul.foco{margin:3px 0 0; padding-left:15px}
+  ul.foco li{margin:1.5px 0}
+
+  .add-card{
+    border:2px dashed var(--line); background:transparent; border-radius:var(--radius);
+    color:var(--muted); font-weight:700; font-size:12px; cursor:pointer; min-height:48px;
+    display:none; align-items:center; justify-content:center; gap:7px; transition:.15s;
+  }
+  .add-card:hover{border-color:var(--blue); color:var(--blue); background:var(--blue-soft)}
+
+  .del-card{
+    position:absolute; top:8px; right:8px; width:24px;height:24px;border-radius:50%;
+    border:0; background:#fdecea; color:var(--red); font-size:15px; cursor:pointer; display:none;
+    line-height:1; font-weight:700;
+  }
+  .del-card:hover{background:var(--red); color:#fff}
+
+  /* ---------- Almoço ---------- */
+  .almoco{margin-top:22px; background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px}
+  .almoco > h2{margin:0 0 11px; text-align:center; color:var(--navy); font-size:14px; letter-spacing:.3px; font-weight:800}
+  .windows{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  @media(max-width:900px){ .windows{grid-template-columns:1fr} }
+  .window{border:1px solid var(--line); border-radius:11px; overflow:hidden}
+  .window .wh{background:var(--navy); color:#fff; padding:8px 12px; font-weight:700; font-size:12.5px; display:flex; align-items:center; gap:7px}
+  .window .wh .time{margin-left:auto; font-size:11.5px; opacity:.9}
+  .window .wbody{display:grid; grid-template-columns:repeat(3,1fr); gap:0}
+  @media(max-width:560px){ .window .wbody{grid-template-columns:1fr} }
+  .gal-slot{padding:10px; border-right:1px solid var(--line); border-bottom:1px solid var(--line)}
+  .gal-slot:nth-child(3n){border-right:0}
+  .gal-slot h4{margin:0 0 1px; font-size:11.5px}
+  .gal-slot .tot{font-size:10px; color:var(--muted); margin-bottom:7px}
+  .gal-slot .icons{display:flex; gap:2.5px; flex-wrap:wrap; min-height:26px; margin-bottom:7px}
+  .person.lunch{background:var(--red)}
+  .ctrl-lunch{display:flex; align-items:center; gap:6px; font-size:11px; margin-bottom:5px}
+  .ctrl-lunch label{color:var(--muted); font-weight:600}
+  .nums{font-size:11px; line-height:1.5}
+  .nums .a{color:var(--red); font-weight:700}
+  .nums .v{color:var(--green); font-weight:700}
+  .alert{color:var(--red); font-weight:700; font-size:10px; margin-top:3px; display:none}
+  .alert.show{display:block}
+  .window-total{background:var(--meli-yellow); color:var(--ink); font-weight:700; text-align:center; padding:8px; font-size:12px}
+
+  .legenda{display:flex; gap:20px; justify-content:center; margin-top:11px; font-size:11px; color:var(--muted); font-weight:600}
+  .legenda span{display:inline-flex; align-items:center; gap:5px}
+  .lg-dot{width:11px;height:11px;border-radius:3px}
+
+  .almoco-controls{display:none; flex-wrap:wrap; align-items:center; gap:14px; justify-content:center;
+    background:#f6f7fb; border:1px solid var(--line); border-radius:9px; padding:8px 12px; margin-bottom:9px; font-size:11.5px; font-weight:600}
+  body.editing .almoco-controls{display:flex}
+  .almoco-controls .vlink{display:inline-flex; align-items:center; gap:6px; cursor:pointer; user-select:none}
+  .almoco-controls .vlink input{width:15px;height:15px;accent-color:var(--navy);cursor:pointer}
+  .almoco-controls .ctl{display:inline-flex; align-items:center; gap:6px; color:var(--muted)}
+  .eq-btn{border:0;border-radius:7px;background:var(--navy);color:#fff;font-weight:700;font-size:11.5px;padding:6px 11px;cursor:pointer}
+  .eq-btn:hover{background:var(--navy-2)}
+  .almoco-note{font-size:11px; color:var(--muted); text-align:center; margin-bottom:10px; line-height:1.45}
+  .almoco-note b{color:var(--ink)}
+  .almoco-min{font-size:11.5px; text-align:center; margin-top:11px; color:var(--muted); font-weight:600}
+  .almoco-min b{font-family:var(--mono); font-weight:700; padding:1px 2px}
+  .cv-ok{color:var(--green)} .cv-bad{color:var(--red)}
+
+  /* ---------- Regras ---------- */
+  .regras{margin-top:18px; background:var(--card); border:1px solid var(--line); border-left:5px solid var(--meli-yellow); border-radius:12px; box-shadow:var(--shadow); padding:13px 18px}
+  .regras h3{margin:0 0 8px; color:var(--navy); font-size:13px; display:flex; align-items:center; gap:7px}
+  .regras ul{margin:0; padding-left:18px; display:grid; grid-template-columns:1fr 1fr; gap:5px 22px}
+  @media(max-width:760px){ .regras ul{grid-template-columns:1fr} }
+  .regras li{font-size:11.5px}
+
+  /* editable affordance */
+  [data-edit]{border-radius:5px; transition:background .12s; outline:none}
+  body.editing [data-edit]:hover{background:#fff7d6}
+  body.editing [data-edit]:focus{background:#fff7d6; box-shadow:0 0 0 2px #ffc107}
+  body.editing .add-card{display:flex}
+  body.editing .del-card{display:block}
+  body.editing .stepper{display:inline-flex}
+  body:not(.editing) .stepper{display:none}
+  body:not(.editing) .ctrl-lunch{display:none}
+  .ops-static{display:none}
+  body:not(.editing) .ops-static{display:inline}
+
+  .hint{text-align:center; font-size:11px; color:var(--muted); margin:12px 0 0}
+  .foot{text-align:center; font-size:10px; color:var(--muted); margin-top:20px}
+
+  /* ---------- Print ---------- */
+  @page{ size:A4 landscape; margin:8mm }
+  @media print{
+    .toolbar,.add-card,.del-card,.stepper,.ctrl-lunch,.hint{display:none !important}
+    body{background:#fff}
+    .wrap{margin:0; max-width:none}
+    .card,.almoco,.regras,.window,.dept{box-shadow:none}
+    .ops-static{display:inline !important}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="brand">
+    <span>📦 Organograma — Expedição</span>
+    <small>Operação SSP23 · Mercado Livre</small>
+  </div>
+  <span class="save-state"><span class="dot" id="dot"></span> <span id="saveTxt">salvo</span></span>
+  <button class="btn toggle" id="editBtn">✏️ Modo edição</button>
+  <button class="btn" id="exportBtn">⬇️ Exportar</button>
+  <button class="btn" id="importBtn">⬆️ Importar</button>
+  <button class="btn primary" id="printBtn">🖨️ Imprimir / PDF</button>
+  <button class="btn warn" id="resetBtn">↺ Restaurar</button>
+  <input type="file" id="fileIn" accept="application/json" hidden>
+</div>
+
+<div class="wrap" id="app"><!-- render --></div>
+
+<script>
+/* ============ ESTADO PADRÃO (fiel à imagem) ============ */
+const DEFAULT = {
+  leader:{ name:"JONAS NETO", role:"TEAM LEADER" },
+  sorting:{
+    title:"SORTING", subtitle:"4 ANALISTAS",
+    analistas:[
+      {name:"VICTOR", role:"Responsável Sorting", foco:"Operação e Produtividade"},
+      {name:"BETO",   role:"Analista",            foco:"Qualidade e Backlog"},
+      {name:"NATAN",  role:"Analista",            foco:"Capacity e Contingência"},
+      {name:"LÉO",    role:"Analista",            foco:"Indicadores Sorting"},
+    ]
+  },
+  exped:{
+    title:"EXPEDIÇÃO", subtitle:"22 OPERADORES",
+    galpoes:[
+      {nome:"GALPÃO 1", analista:"SÔNIA",   operadores:["Vanessa","Deborah","Silas"],     foco:["Performance","Qualidade","Pessoas","Processos"]},
+      {nome:"GALPÃO 2", analista:"LUANA",   operadores:["Rafaela","Jefferson","Luciana"], foco:["Performance","Qualidade","Pessoas","Processos"]},
+      {nome:"GALPÃO 3", analista:"NATÁLIA", operadores:["Andreza","Bruno","Fabiana"],     foco:["Performance","Qualidade","Pessoas","Processos"]},
+    ],
+    apoio:{ analista:"GIOVANNA", role:"Analista de Apoio",
+      itens:["Cobertura de Almoço","Cobertura de Folgas","Apoio aos Galpões","Backlog e DSPs","Interface e Suporte"] }
+  },
+  /* turno de almoço fica em cada operador (op.t = 0|1); janelas guardam só o rótulo */
+  almoco:{
+    janelas:[ {label:"08h às 09h"}, {label:"09h às 10h"} ],
+    minAtivos:3
+  },
+  regras:[
+    "Nunca deixar um galpão sem cobertura de analista.",
+    "Cada galpão deve ter no mínimo 3 operadores ativos.",
+    "Distribuição de operadores em 2 grupos de almoço (08h-09h / 09h-10h).",
+    "Giovanna garante apoio e cobertura entre os galpões."
+  ],
+  areas:[
+    {id:"a_inv", nome:"INVENTÁRIO",        icon:"🗃️", aberto:false, pessoas:[]},
+    {id:"a_rts", nome:"MONITORAMENTO/RTS", icon:"🖥️", aberto:false, pessoas:[]}
+  ]
+};
+
+const KEY="org_expedicao_ssp23_v1";
+let D = null;   // cenário (aba) ativo
+
+function uid(){ return 't'+Math.random().toString(36).slice(2,8); }
+function novaExped(nome, analistas){
+  return {
+    id:uid(), name:nome, tipo:"exped",
+    exped:{ title:"EXPEDIÇÃO", subtitle:"",
+      galpoes:(analistas||[]).map((a,i)=>({nome:"GALPÃO "+(i+1), analista:a, operadores:[],
+        foco:["Performance","Qualidade","Pessoas","Processos"]})),
+      apoio:{ analista:"", role:"Analista de Apoio",
+        itens:["Cobertura de Almoço","Cobertura de Folgas","Apoio aos Galpões","Backlog e DSPs","Interface e Suporte"] }
+    },
+    almoco:{ janelas:[{label:"08h às 09h"},{label:"09h às 10h"}], minAtivos:1 },
+    regras:[ "Nunca deixar um galpão sem cobertura de analista.",
+             "Distribuição de operadores em 2 turnos de almoço." ]
+  };
+}
+function geralScenario(){ return Object.assign({id:uid(), name:"Geral", tipo:"full"}, structuredClone(DEFAULT)); }
+function freshState(){ return { activeTab:0, tabs:[ geralScenario(), novaExped("Expedição PM", ["Samuel","Clebson"]) ] }; }
+
+function novaArea(nome, icon){ return { id:uid(), nome, icon:icon||"📁", aberto:false, pessoas:[] }; }
+function seedAreas(){
+  if(S.areasSeeded) return;
+  (S.tabs||[]).forEach(tab=>{
+    if(tab.tipo!=='full') return;
+    if(!Array.isArray(tab.areas)) tab.areas=[];
+    const nomes=tab.areas.map(a=>(a.nome||'').toUpperCase());
+    if(!nomes.includes('INVENTÁRIO'))        tab.areas.push(novaArea("INVENTÁRIO","🗃️"));
+    if(!nomes.includes('MONITORAMENTO/RTS')) tab.areas.push(novaArea("MONITORAMENTO/RTS","🖥️"));
+  });
+  S.areasSeeded=true;
+}
+
+function load(){
+  try{ const r=localStorage.getItem(KEY); if(r) return JSON.parse(r); }catch(e){}
+  return freshState();
+}
+function migrateState(){
+  if(S && Array.isArray(S.tabs)){ if(S.activeTab==null) S.activeTab=0; return; }
+  if(S && S.exped){                       // formato antigo (1 cenário) → vira aba "Geral" + cria "Expedição PM"
+    const geral={ id:uid(), name:"Geral", tipo:"full",
+      leader:S.leader, sorting:S.sorting, exped:S.exped, almoco:S.almoco, regras:S.regras };
+    S={ activeTab:0, tabs:[ geral, novaExped("Expedição PM", ["Samuel","Clebson"]) ] };
+  } else { S=freshState(); }
+}
+let S = load();
+migrateState();
+seedPS();
+seedAreas();
+let saveTimer;
+function save(quiet){
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){}
+  const dot=document.getElementById('dot'), txt=document.getElementById('saveTxt');
+  if(dot&&txt){ dot.classList.add('on'); txt.textContent='salvando…'; clearTimeout(saveTimer);
+    saveTimer=setTimeout(()=>{txt.textContent='salvo';},500); }
+}
+
+/* ============ HELPERS ============ */
+const esc = s => String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function ed(path, attrs=""){ return `data-edit data-path="${path}" contenteditable="true" ${attrs}`; }
+function people(total, lunch){
+  let h=''; for(let i=0;i<total;i++){ h+=`<span class="person ${i<lunch?'lunch':''}"></span>`; } return h;
+}
+const nOps = g => Array.isArray(g.operadores) ? g.operadores.length : (+g.ops||0);
+const isPS = o => o && o.f==='PS';
+const countOP = g => (g.operadores||[]).filter(o=>!isPS(o)).length;
+const countPS = g => (g.operadores||[]).filter(o=> isPS(o)).length;
+const shortG = nome => /galp[ãa]o\s*(\S+)/i.test(nome) ? 'G'+RegExp.$1 : (nome||'').slice(0,4);
+
+const SEED_NAMES=["Vanessa","Deborah","Silas","Rafaela","Jefferson","Luciana","Andreza","Bruno","Fabiana"];
+function migrateOperators(){
+  const gal=D.exped.galpoes;
+  const temListas = gal.some(g=>Array.isArray(g.operadores));
+  if(!temListas && gal.length && D.tipo!=='exped'){
+    gal.forEach(g=>g.operadores=[]);                       // distribui na ordem, em blocos iguais
+    const per=Math.ceil(SEED_NAMES.length/gal.length);
+    SEED_NAMES.forEach((nm,i)=>gal[Math.min(gal.length-1, Math.floor(i/per))].operadores.push({n:nm}));
+  }
+  gal.forEach(g=>{
+    if(!Array.isArray(g.operadores)) g.operadores=[];
+    delete g.ops;
+    // entradas no formato {n: nome, t: turno 0|1, f: função 'OP'|'PS'}
+    g.operadores = g.operadores.map(op => (op&&typeof op==='object') ? op : {n:String(op)});
+    g.operadores.forEach(op=>{
+      op.f = (op.f==='PS') ? 'PS' : 'OP';
+      if(op.t!==0 && op.t!==1){
+        const c0=g.operadores.filter(o=>o.t===0).length;
+        const c1=g.operadores.filter(o=>o.t===1).length;
+        op.t = (c0<=c1)?0:1;
+      }
+    });
+  });
+}
+
+/* adiciona 2 Problem Solvers em cada galpão de todas as abas — uma única vez */
+function seedPS(){
+  if(S.psSeeded) return;
+  S.tabs.forEach(tab=>{
+    (tab.exped && tab.exped.galpoes || []).forEach(g=>{
+      if(!Array.isArray(g.operadores)) g.operadores=[];
+      g.operadores = g.operadores.map(o=> (o&&typeof o==='object')?o:{n:String(o)});
+      for(let k=1;k<=2;k++){
+        const c0=g.operadores.filter(o=>o.t===0).length, c1=g.operadores.filter(o=>o.t===1).length;
+        g.operadores.push({n:"PS "+k, f:'PS', t:(c0<=c1)?0:1});
+      }
+    });
+  });
+  S.psSeeded=true;
+}
+
+/* ============ RENDER ============ */
+function ensureJanelas(){
+  if(!Array.isArray(D.almoco.janelas)) D.almoco.janelas=[];
+  while(D.almoco.janelas.length<2)
+    D.almoco.janelas.push({label:D.almoco.janelas.length===0?"08h às 09h":"09h às 10h"});
+  D.almoco.janelas.length=2;
+}
+function ensureAreas(){
+  if(D.tipo!=='full') return;
+  if(!Array.isArray(D.areas)) D.areas=[];
+  D.areas.forEach(a=>{
+    if(!a.id) a.id=uid();
+    if(!Array.isArray(a.pessoas)) a.pessoas=[];
+    a.pessoas = a.pessoas.map(p=> (p&&typeof p==='object')?p:{n:String(p)});
+    a.pessoas.forEach(p=>{ if(typeof p.fn!=='string') p.fn=''; });
+  });
+}
+
+function render(){
+  D = S.tabs[S.activeTab] || S.tabs[0];
+  S.activeTab = S.tabs.indexOf(D);
+  migrateOperators();
+  ensureJanelas();
+  ensureAreas();
+  const totalOps = D.exped.galpoes.reduce((a,g)=>a+ nOps(g),0);
+  D.exped.subtitle = totalOps+" OPERADORES";
+
+  const app = document.getElementById('app');
+  const corpo = D.tipo==='exped'
+    ? `<div class="solo">${expedDeptHTML(true)}</div>`
+    : `<div class="leader">
+         <div class="av">👤</div>
+         <div>
+           <h1 ${ed('leader.name')}>${esc(D.leader.name)}</h1>
+           <div class="role" ${ed('leader.role')}>${esc(D.leader.role)}</div>
+         </div>
+       </div>
+       <div class="spine"></div>
+       <div class="accordion">
+         ${sortingDeptHTML()}
+         ${expedDeptHTML(false)}
+         ${areasHTML()}
+         <button class="area-add" data-areaadd>＋ adicionar área</button>
+       </div>`;
+
+  app.innerHTML = tabsHTML() + corpo + escalaHTML(totalOps) + regrasHTML() + `
+  <p class="hint" id="hint"></p>
+  <p class="foot">Ferramenta interativa · clique numa área para abrir/fechar · dados ficam no seu navegador.</p>`;
+
+  bind();
+  updateHint();
+}
+
+/* ---- abas (cenários) ---- */
+function tabsHTML(){
+  return `<div class="tabs">
+    ${S.tabs.map((t,i)=>`
+      <div class="tab ${i===S.activeTab?'active':''}" data-tab="${i}">
+        <span class="tab-tipo">${t.tipo==='exped'?'🚚':'🗂️'}</span>
+        <span class="tab-name" ${i===S.activeTab?`data-tabname="${i}" contenteditable="true"`:''}>${esc(t.name)}</span>
+        ${i===S.activeTab && S.tabs.length>1?`<button class="tab-close" data-tabclose="${i}" title="Excluir aba">×</button>`:''}
+      </div>`).join('')}
+    <button class="tab-add" data-tabadd title="Nova aba de Expedição">＋ aba</button>
+  </div>`;
+}
+
+/* ---- seções reutilizáveis (usam o cenário ativo D) ---- */
+function sortingDeptHTML(){
+  if(!D.sorting) return '';
+  const open=!!D.sorting.aberto;
+  return `<section class="dept ${open?'':'closed'}">
+    <div class="branch-head head-sorting" data-toggle="sorting">
+      <div class="ic">🏭</div>
+      <div><span ${ed('sorting.title')} onclick="event.stopPropagation()">${esc(D.sorting.title)}</span>
+        <small>(<span ${ed('sorting.subtitle')} onclick="event.stopPropagation()">${esc(D.sorting.subtitle)}</span>)</small></div>
+      <span class="chev">▾</span>
+    </div>
+    <div class="dept-body"><div class="col-cards grid-sorting">
+      ${D.sorting.analistas.map((a,i)=>`
+        <div class="card">
+          <button class="del-card" data-del="sorting" data-i="${i}" title="Remover">×</button>
+          <div class="top">
+            <div class="avatar av-blue">👤</div>
+            <div><div class="nm" ${ed('sorting.analistas.'+i+'.name')}>${esc(a.name)}</div>
+              <div class="rl" ${ed('sorting.analistas.'+i+'.role')}>${esc(a.role)}</div></div>
+          </div>
+          <div class="body">
+            <div class="pill-foco">Foco</div>
+            <div ${ed('sorting.analistas.'+i+'.foco')}>${esc(a.foco)}</div>
+          </div>
+          <div class="strip strip-blue"></div>
+        </div>`).join('')}
+      <button class="add-card" data-add="sorting">＋ Adicionar analista</button>
+    </div></div>
+  </section>`;
+}
+
+function expedDeptHTML(forceOpen){
+  const open = forceOpen || !!D.exped.aberto;
+  return `<section class="dept ${open?'':'closed'}">
+    <div class="branch-head head-exped" ${forceOpen?'':'data-toggle="exped"'}>
+      <div class="ic">🚚</div>
+      <div><span ${ed('exped.title')} onclick="event.stopPropagation()">${esc(D.exped.title)}</span>
+        <small>(<span data-path="exped.subtitle">${esc(D.exped.subtitle)}</span>)</small></div>
+      ${forceOpen?'':'<span class="chev">▾</span>'}
+    </div>
+    <div class="dept-body"><div class="col-cards grid-exped">
+      ${D.exped.galpoes.map((g,i)=>`
+        <div class="card galpao">
+          <button class="del-card" data-del="galpao" data-i="${i}" title="Remover galpão">×</button>
+          <div class="strip strip-green"></div>
+          <div class="top">
+            <div class="avatar av-green">👤</div>
+            <div><div class="nm" ${ed('exped.galpoes.'+i+'.nome')}>${esc(g.nome)}</div>
+              <div class="rl"><span ${ed('exped.galpoes.'+i+'.analista')}>${esc(g.analista)}</span> · Analista Responsável</div></div>
+          </div>
+          <div class="body">
+            <div class="ops-count">
+              <div class="ops-icons">${'<span class="person"></span>'.repeat(countOP(g))}${'<span class="person ps"></span>'.repeat(countPS(g))}</div>
+              <div class="ops-num">${countOP(g)} <small>op</small>${countPS(g)?` · <span class="ps-num">${countPS(g)} PS</span>`:''}</div>
+            </div>
+            <div class="op-list">
+              ${(g.operadores||[]).map((op,oi)=>`
+                <div class="op-chip ${isPS(op)?'is-ps':''}">
+                  <span class="turno t${op.t}" title="Turno de almoço">${op.t===0?'1ª':'2ª'}</span>
+                  <span class="func ${isPS(op)?'f-ps':'f-op'}" data-fn data-g="${i}" data-o="${oi}" title="Função — clique para trocar (OP ⇄ PS)">${isPS(op)?'PS':'OP'}</span>
+                  <span class="op-name" data-edit data-path="exped.galpoes.${i}.operadores.${oi}.n" contenteditable="true">${esc(op.n)}</span>
+                  <span class="op-actions">
+                    ${D.exped.galpoes.map((gg,ti)=>ti===i?'':
+                      `<button class="mv" data-mv data-g="${i}" data-o="${oi}" data-to="${ti}" title="Mover para ${esc(gg.nome)}">→${esc(shortG(gg.nome))}</button>`).join('')}
+                    <button class="op-del" data-opdel data-g="${i}" data-o="${oi}" title="Remover">×</button>
+                  </span>
+                </div>`).join('')}
+              <button class="op-add" data-opadd="${i}" data-func="OP">＋ operador</button>
+              <button class="op-add op-add-ps" data-opadd="${i}" data-func="PS">＋ PS</button>
+            </div>
+            <div class="pill-foco">Foco · Gestão do ${esc(g.nome)}</div>
+            <ul class="foco" ${ed('exped.galpoes.'+i+'.foco','data-list="1"')}>${g.foco.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>
+          </div>
+        </div>`).join('')}
+      <button class="add-card" data-add="galpao">＋ Adicionar galpão</button>
+
+      <div class="card" style="grid-column:1/-1">
+        <div class="apoio-tag">APOIO</div>
+        <div class="top">
+          <div class="avatar av-orange">👤</div>
+          <div><div class="nm" style="color:var(--navy)" ${ed('exped.apoio.analista')}>${esc(D.exped.apoio.analista)}</div>
+            <div class="rl" ${ed('exped.apoio.role')}>${esc(D.exped.apoio.role)}</div></div>
+        </div>
+        <div class="body">
+          <div class="pill-foco" style="color:var(--navy)">Responsável por</div>
+          <ul class="foco" ${ed('exped.apoio.itens','data-list="1"')}>${D.exped.apoio.itens.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+        </div>
+      </div>
+    </div></div>
+  </section>`;
+}
+
+function areasHTML(){
+  return (D.areas||[]).map((a,ai)=>{
+    const open=!!a.aberto;
+    return `<section class="dept area ${open?'':'closed'}">
+      <div class="branch-head head-area" data-toggle="area:${a.id}">
+        <button class="area-del" data-areadel="${ai}" title="Excluir área" onclick="event.stopPropagation()">×</button>
+        <div class="ic">${a.icon||'📁'}</div>
+        <div><span ${ed('areas.'+ai+'.nome')} onclick="event.stopPropagation()">${esc(a.nome)}</span>
+          <small>(${a.pessoas.length} ${a.pessoas.length===1?'pessoa':'pessoas'})</small></div>
+        <span class="chev">▾</span>
+      </div>
+      <div class="dept-body">
+        <div class="area-people">
+          ${a.pessoas.map((p,pi)=>`
+            <div class="op-chip">
+              <span class="func f-area" data-edit data-path="areas.${ai}.pessoas.${pi}.fn" contenteditable="true" title="Função (clique para editar)">${esc(p.fn)}</span>
+              <span class="op-name" data-edit data-path="areas.${ai}.pessoas.${pi}.n" contenteditable="true">${esc(p.n)}</span>
+              <span class="op-actions"><button class="op-del" data-areapdel data-a="${ai}" data-p="${pi}" title="Remover">×</button></span>
+            </div>`).join('') || '<span class="lc-empty">sem pessoas</span>'}
+          <button class="op-add" data-areapadd="${ai}">＋ pessoa</button>
+        </div>
+      </div>
+    </section>`;
+  }).join('');
+}
+
+function escalaHTML(totalOps){
+  return `<div class="almoco">
+    <h2>🍽️ ESCALA DE ALMOÇO — OPERADORES (${totalOps} NO TOTAL)</h2>
+    <div class="almoco-controls">
+      <span class="ctl">Mín. ativos/galpão
+        <span class="stepper"><button id="minDec">−</button><span>${D.almoco.minAtivos}</span><button id="minInc">＋</button></span>
+      </span>
+      <button class="eq-btn" id="eqBtn">⚖️ Equilibrar turnos</button>
+    </div>
+    <div class="almoco-note">Cada operador tem um <b>turno de almoço</b> (1ª ou 2ª janela) — então todo mundo almoça uma vez e o total se conserva. No <b>modo edição</b>, clique em um nome para trocar o turno dele. <b style="color:var(--green)">Verde</b> = ativo na operação · <b style="color:var(--red)">vermelho</b> = em almoço.</div>
+    <div class="windows">${D.almoco.janelas.map((j,wi)=>renderWindow(j,wi)).join('')}</div>
+    <div class="almoco-min">🔻 Menor cobertura no dia: ${D.exped.galpoes.map((g)=>{
+        const c0=(g.operadores||[]).filter(o=>o.t===0).length;
+        const c1=(g.operadores||[]).filter(o=>o.t===1).length;
+        const minAtivo=Math.min(c0,c1);
+        const bad=minAtivo<D.almoco.minAtivos;
+        return `<b class="${bad?'cv-bad':'cv-ok'}">${esc(shortG(g.nome))}: ${minAtivo}</b>`;
+      }).join(' · ')}</div>
+    <div class="legenda">
+      <span><span class="lg-dot" style="background:var(--red)"></span> Em almoço</span>
+      <span><span class="lg-dot" style="background:var(--green)"></span> Ativo na operação</span>
+    </div>
+  </div>`;
+}
+
+function regrasHTML(){
+  return `<div class="regras">
+    <h3>🛡️ Regras de cobertura</h3>
+    <ul ${ed('regras','data-list="1"')}>${(D.regras||[]).map(r=>`<li>${esc(r)}</li>`).join('')}</ul>
+  </div>`;
+}
+
+/* ---- conectores do organograma (líder → áreas), precisos e responsivos ---- */
+function drawWires(){
+  const tree=document.getElementById('tree'), svg=document.getElementById('wires');
+  if(!tree||!svg) return;
+  const cr=tree.getBoundingClientRect();
+  svg.setAttribute('viewBox',`0 0 ${cr.width} ${cr.height}`);
+  // empilhado no mobile: sem fios (a própria pilha já comunica hierarquia)
+  if(window.innerWidth<=980){ svg.innerHTML=''; return; }
+  const leader=tree.querySelector('.leader');
+  const heads=[...tree.querySelectorAll('.branch-head')];
+  if(!leader||!heads.length){ svg.innerHTML=''; return; }
+  const pt=(el,fx,fy)=>{ const r=el.getBoundingClientRect();
+    return [ r.left-cr.left + r.width*fx, r.top-cr.top + r.height*fy ]; };
+  const [lx,ly]=pt(leader,.5,1);
+  const tgt=heads.map(h=>pt(h,.5,0));
+  const xs=tgt.map(t=>t[0]);
+  const busY=(ly + Math.min(...tgt.map(t=>t[1])))/2;
+  let d=`M ${lx.toFixed(1)} ${ly.toFixed(1)} V ${busY.toFixed(1)} `;          // tronco do líder
+  d+=`M ${Math.min(...xs).toFixed(1)} ${busY.toFixed(1)} H ${Math.max(...xs).toFixed(1)} `; // barramento
+  tgt.forEach(([tx,tyTop])=>{ d+=`M ${tx.toFixed(1)} ${busY.toFixed(1)} V ${tyTop.toFixed(1)} `; }); // descidas
+  svg.innerHTML=`<path d="${d}" fill="none" stroke="#aeb4d6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`
+    + tgt.map(([tx])=>`<circle cx="${tx.toFixed(1)}" cy="${busY.toFixed(1)}" r="3" fill="#aeb4d6"/>`).join('')
+    + `<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3" fill="#aeb4d6"/>`;
+}
+let wireTimer;
+window.addEventListener('resize',()=>{ clearTimeout(wireTimer); wireTimer=setTimeout(drawWires,120); });
+window.addEventListener('load',()=>setTimeout(drawWires,80)); // após carregar a fonte
+if(document.fonts&&document.fonts.ready){ document.fonts.ready.then(()=>setTimeout(drawWires,30)); }
+
+function renderWindow(j, wi){
+  let totalAtivos=0;
+  const slots = D.exped.galpoes.map((g,gi)=>{
+    const ops=g.operadores||[];
+    const emAlmoco=ops.filter(o=>o.t===wi).length;
+    const ativos=ops.length-emAlmoco; totalAtivos+=ativos;
+    const bad = ativos < D.almoco.minAtivos;
+    const chips = ops.map((op,oi)=>{
+      const lunching = op.t===wi;
+      return `<span class="lc ${lunching?'lc-lunch':'lc-active'} ${isPS(op)?'lc-ps':''}" data-tg data-g="${gi}" data-o="${oi}"
+        title="${isPS(op)?'PS · ':''}${lunching?'Em almoço':'Ativo'} — clique para trocar o turno">${isPS(op)?'<b>PS</b> ':''}${esc(op.n)}</span>`;
+    }).join('');
+    return `
+      <div class="gal-slot">
+        <h4>${esc(g.nome)}</h4>
+        <div class="tot">Almoço ${emAlmoco} · Ativos ${ativos} de ${ops.length}${countPS(g)?` (${countPS(g)} PS)`:''}</div>
+        <div class="lc-list">${chips || '<span class="lc-empty">sem operadores</span>'}</div>
+        <div class="nums">Almoço: <span class="a">${emAlmoco}</span> &nbsp;|&nbsp; Ativos: <span class="v">${ativos}</span></div>
+        <div class="alert ${bad?'show':''}">⚠ Abaixo do mínimo (${D.almoco.minAtivos})</div>
+      </div>`;
+  }).join('');
+  return `
+    <div class="window">
+      <div class="wh">🕐 <span data-edit data-path="almoco.janelas.${wi}.label" contenteditable="true">${esc(j.label)}</span></div>
+      <div class="wbody">${slots}</div>
+      <div class="window-total">TOTAL ATIVOS NO PERÍODO: ${totalAtivos} OPERADORES</div>
+    </div>`;
+}
+
+/* ============ EDIÇÃO DE TEXTO ============ */
+function setPath(path,val){
+  const ks=path.split('.'); let o=D;        // caminhos são relativos ao cenário ativo
+  for(let i=0;i<ks.length-1;i++){ o=o[/^\d+$/.test(ks[i+1])?+ks[i]:ks[i]] ?? o[ks[i]]; if(o===undefined)return; }
+  const last=ks[ks.length-1]; o[/^\d+$/.test(last)?+last:last]=val;
+}
+
+function bind(){
+  // texto simples
+  document.querySelectorAll('[data-edit]').forEach(el=>{
+    el.addEventListener('blur',()=>{
+      const path=el.dataset.path;
+      if(el.dataset.list){
+        const items=[...el.querySelectorAll('li')].map(li=>li.textContent.trim()).filter(Boolean);
+        setPath(path, items);
+      }else{
+        setPath(path, el.textContent.trim());
+      }
+      save();
+    });
+    el.addEventListener('keydown',e=>{
+      if(e.key==='Enter' && !el.dataset.list){ e.preventDefault(); el.blur(); }
+    });
+  });
+
+  // ----- ABAS -----
+  document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=(e)=>{
+    if(e.target.closest('[data-tabclose]')) return;
+    if(e.target.closest('[data-tabname]')) return;   // editando o nome, não troca
+    const i=+el.dataset.tab;
+    if(i!==S.activeTab){ S.activeTab=i; save(); render(); }
+  });
+
+  // ----- SANFONA (abrir/fechar áreas) -----
+  document.querySelectorAll('[data-toggle]').forEach(el=>el.onclick=(e)=>{
+    if(e.target.closest('[contenteditable]')) return;
+    const k=el.dataset.toggle;
+    if(k==='sorting'){ D.sorting.aberto=!D.sorting.aberto; }
+    else if(k==='exped'){ D.exped.aberto=!D.exped.aberto; }
+    else if(k.startsWith('area:')){ const a=(D.areas||[]).find(x=>x.id===k.slice(5)); if(a) a.aberto=!a.aberto; }
+    save(); render();
+  });
+
+  // ----- ÁREAS (Inventário, Monitoramento/RTS, ...) -----
+  const aadd=document.querySelector('[data-areaadd]');
+  if(aadd) aadd.onclick=()=>{
+    const nm=(prompt("Nome da nova área:")||"").trim(); if(!nm) return;
+    const a=novaArea(nm.toUpperCase(),"📁"); a.aberto=true; D.areas.push(a); save(); render();
+  };
+  document.querySelectorAll('[data-areadel]').forEach(b=>b.onclick=()=>{
+    const ai=+b.dataset.areadel;
+    if(confirm(`Excluir a área “${D.areas[ai].nome}”?`)){ D.areas.splice(ai,1); save(); render(); }
+  });
+  document.querySelectorAll('[data-areapadd]').forEach(b=>b.onclick=()=>{
+    const ai=+b.dataset.areapadd;
+    const nm=(prompt("Nome da pessoa:")||"").trim(); if(!nm) return;
+    const fn=(prompt("Função (ex.: Inventário, RTS, Conferente, Monitor):")||"").trim();
+    D.areas[ai].pessoas.push({n:nm, fn}); save(); render();
+  });
+  document.querySelectorAll('[data-areapdel]').forEach(b=>b.onclick=()=>{
+    D.areas[+b.dataset.a].pessoas.splice(+b.dataset.p,1); save(); render();
+  });
+  document.querySelectorAll('[data-tabname]').forEach(el=>{
+    el.addEventListener('blur',()=>{ S.tabs[+el.dataset.tabname].name=(el.textContent.trim()||'Aba'); save(); });
+    el.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); el.blur(); } });
+  });
+  const tadd=document.querySelector('[data-tabadd]');
+  if(tadd) tadd.onclick=()=>{ S.tabs.push(novaExped("Expedição", ["",""])); S.activeTab=S.tabs.length-1; save(); render(); };
+  document.querySelectorAll('[data-tabclose]').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.tabclose;
+    if(S.tabs.length<=1) return;
+    if(confirm(`Excluir a aba “${S.tabs[i].name}”? Os dados dessa aba serão perdidos.`)){
+      S.tabs.splice(i,1);
+      S.activeTab=Math.max(0,Math.min(S.activeTab, S.tabs.length-1));
+      save(); render();
+    }
+  });
+
+  // mover operador entre galpões
+  document.querySelectorAll('[data-mv]').forEach(b=>b.onclick=()=>{
+    const g=+b.dataset.g, o=+b.dataset.o, to=+b.dataset.to;
+    const arr=D.exped.galpoes[g].operadores;
+    if(!arr||o<0||o>=arr.length) return;
+    const nm=arr.splice(o,1)[0];
+    (D.exped.galpoes[to].operadores ||= []).push(nm);
+    save(); render();
+  });
+
+  // adicionar operador / PS
+  document.querySelectorAll('[data-opadd]').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.opadd, func=b.dataset.func==='PS'?'PS':'OP';
+    const nm=(prompt(func==='PS'?"Nome do Problem Solver:":"Nome do novo operador:")||"").trim();
+    if(nm){
+      const arr=(D.exped.galpoes[i].operadores ||= []);
+      const c0=arr.filter(o=>o.t===0).length, c1=arr.filter(o=>o.t===1).length;
+      arr.push({n:nm, f:func, t:(c0<=c1)?0:1});
+      save(); render();
+    }
+  });
+
+  // trocar função OP ⇄ PS (clique no selo, no modo edição)
+  document.querySelectorAll('[data-fn]').forEach(el=>el.onclick=()=>{
+    if(!document.body.classList.contains('editing')) return;
+    const op=D.exped.galpoes[+el.dataset.g].operadores[+el.dataset.o];
+    op.f = op.f==='PS' ? 'OP' : 'PS'; save(); render();
+  });
+
+  // remover operador
+  document.querySelectorAll('[data-opdel]').forEach(b=>b.onclick=()=>{
+    const g=+b.dataset.g, o=+b.dataset.o;
+    D.exped.galpoes[g].operadores.splice(o,1); save(); render();
+  });
+
+  // trocar o turno de almoço do operador (clique no nome, no modo edição)
+  document.querySelectorAll('[data-tg]').forEach(el=>el.onclick=()=>{
+    if(!document.body.classList.contains('editing')) return;
+    const op=D.exped.galpoes[+el.dataset.g].operadores[+el.dataset.o];
+    op.t = op.t===0 ? 1 : 0; save(); render();
+  });
+
+  // mínimo de ativos por galpão
+  const maxOps=Math.max(0,...D.exped.galpoes.map(g=>nOps(g)));
+  const setMin=d=>{ D.almoco.minAtivos=Math.max(0,Math.min(maxOps,(+D.almoco.minAtivos||0)+d)); save(); render(); };
+  if(document.getElementById('minDec')) document.getElementById('minDec').onclick=()=>setMin(-1);
+  if(document.getElementById('minInc')) document.getElementById('minInc').onclick=()=>setMin(1);
+
+  // equilibrar turnos: metade na 1ª janela, metade na 2ª (por galpão)
+  const eq=document.getElementById('eqBtn');
+  if(eq) eq.onclick=()=>{
+    D.exped.galpoes.forEach(g=>{
+      (g.operadores||[]).forEach((op,i)=>{ op.t = i < Math.floor(g.operadores.length/2) ? 0 : 1; });
+    });
+    save(); render();
+  };
+
+  // add (analista / galpão)
+  document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{
+    if(b.dataset.add==='sorting'){
+      D.sorting.analistas.push({name:"NOVO",role:"Analista",foco:"Definir foco"});
+    }else{
+      const n=D.exped.galpoes.length+1;
+      D.exped.galpoes.push({nome:"GALPÃO "+n,analista:"NOME",operadores:[],foco:["Performance","Qualidade","Pessoas","Processos"]});
+    }
+    save(); render();
+  });
+
+  // delete (analista / galpão)
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.i;
+    if(b.dataset.del==='sorting'){ D.sorting.analistas.splice(i,1); }
+    else{ D.exped.galpoes.splice(i,1); }
+    save(); render();
+  });
+}
+
+function updateHint(){
+  const h=document.getElementById('hint');
+  if(!h) return;
+  h.textContent = document.body.classList.contains('editing')
+    ? "Modo edição: clique no nome para renomear · use →G1/→G2 para mover o operador de galpão · ＋ operador adiciona · × remove."
+    : "Modo visualização — clique em “Modo edição” para mover operadores, renomear e ajustar a escala.";
+}
+
+/* ============ TOOLBAR ============ */
+document.getElementById('editBtn').onclick=function(){
+  document.body.classList.toggle('editing');
+  this.classList.toggle('on', document.body.classList.contains('editing'));
+  updateHint();
+};
+document.getElementById('printBtn').onclick=()=>window.print();
+document.getElementById('resetBtn').onclick=()=>{
+  if(confirm("Restaurar tudo para a versão padrão? Todas as abas e alterações salvas serão perdidas.")){
+    S=freshState(); save(); render();
+  }
+};
+document.getElementById('exportBtn').onclick=()=>{
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='organograma-expedicao-ssp23.json'; a.click();
+};
+document.getElementById('importBtn').onclick=()=>document.getElementById('fileIn').click();
+document.getElementById('fileIn').onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ S=JSON.parse(r.result); migrateState(); save(); render(); }catch(err){ alert("Arquivo inválido."); } };
+  r.readAsText(f); e.target.value='';
+};
+
+render();
+</script>
+</body>
+</html>
