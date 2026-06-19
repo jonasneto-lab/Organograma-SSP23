@@ -374,6 +374,14 @@ const DEFAULT = {
 };
 
 const KEY="org_expedicao_ssp23_v1";
+
+/* ====== SINCRONIZAÇÃO NA NUVEM (para todos verem as edições) ======
+   Cole abaixo a URL /exec do seu Web App do Google Apps Script.
+   Deixe "" (vazio) para funcionar só neste navegador (localStorage).        */
+const CLOUD_URL = "https://script.google.com/a/macros/mercadolivre.com/s/AKfycbw7dQEnplVcdeQh3QK4dXh-Fv9JE4tbhb3xEbYhBI4FKVdtb6-AALqyjaCHihVTjPyN6Q/exec";
+const cloudOn = !!CLOUD_URL;
+let cloudReady=false, pushTimer=null, lastSync="", pollTimer=null;
+function isEditingNow(){ return !!(document.activeElement && document.activeElement.isContentEditable); }
 let D = null;   // cenário (aba) ativo
 
 function uid(){ return 't'+Math.random().toString(36).slice(2,8); }
@@ -426,9 +434,58 @@ seedAreas();
 let saveTimer;
 function save(quiet){
   try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){}
+  cloudSaveDebounced();
   const dot=document.getElementById('dot'), txt=document.getElementById('saveTxt');
-  if(dot&&txt){ dot.classList.add('on'); txt.textContent='salvando…'; clearTimeout(saveTimer);
-    saveTimer=setTimeout(()=>{txt.textContent='salvo';},500); }
+  if(dot&&txt){ dot.classList.add('on'); txt.textContent=cloudOn?'sincronizando…':'salvando…'; clearTimeout(saveTimer);
+    saveTimer=setTimeout(()=>{txt.textContent=cloudOn?'na nuvem':'salvo';},700); }
+}
+
+/* ---- nuvem: carregar, enviar, e buscar atualizações ---- */
+async function cloudFetch(){
+  const r=await fetch(CLOUD_URL+'?action=get&t='+Date.now(), {cache:'no-store'});
+  const txt=await r.text();
+  if(!txt || !txt.trim()) return null;
+  const v=JSON.parse(txt);
+  return (v && v.tabs) ? v : null;
+}
+async function cloudPush(){
+  if(!cloudOn) return;
+  const body=JSON.stringify(S);
+  if(body===lastSync) return;
+  lastSync=body;
+  try{ await fetch(CLOUD_URL, {method:'POST', body}); }catch(e){ /* gravação dispara mesmo com CORS */ }
+}
+function cloudSaveDebounced(){
+  if(!cloudOn || !cloudReady) return;
+  clearTimeout(pushTimer); pushTimer=setTimeout(cloudPush, 600);
+}
+async function cloudPoll(){
+  if(!cloudOn || isEditingNow()) return;     // não atropela quem está digitando
+  try{
+    const v=await cloudFetch(); if(!v) return;
+    if(JSON.stringify(v)!==JSON.stringify(S)){
+      S=v; migrateState(); seedPS(); seedAreas();
+      lastSync=JSON.stringify(S);
+      try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){}
+      render();
+    }
+  }catch(e){}
+}
+async function boot(){
+  if(cloudOn){
+    try{
+      const v=await cloudFetch();
+      if(v){ S=v; migrateState(); seedPS(); seedAreas(); }
+      lastSync=JSON.stringify(S);
+      cloudReady=true;
+      render();
+      if(!v) cloudPush();                      // 1ª vez: publica o conteúdo atual
+      pollTimer=setInterval(cloudPoll, 8000);  // busca atualizações a cada 8s
+      window.addEventListener('focus', cloudPoll);
+    }catch(e){ cloudReady=false; render(); }   // se a nuvem falhar, segue local
+  } else {
+    render();
+  }
 }
 
 /* ============ HELPERS ============ */
@@ -946,7 +1003,7 @@ document.getElementById('fileIn').onchange=e=>{
   r.readAsText(f); e.target.value='';
 };
 
-render();
+boot();
 </script>
 </body>
 </html>
